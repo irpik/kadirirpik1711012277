@@ -1,6 +1,7 @@
 var request = require('postman-request');
 var apiSecenekleri = {
-  sunucu : "http://localhost:3000",
+  //sunucu : 'http://localhost:3000',
+  sunucu : 'http://kadirirpik1711012277.herokuapp.com',
   apiYolu: '/api/mekanlar/'
 };
 var istekSecenekleri
@@ -96,7 +97,8 @@ var hataGoster = function(req, res,durum){
   });
 };
 
-var mekanBilgisi = function (req, res, callback) {
+var mekanBilgisiGetir = function (req, res, callback) {
+  var istekSecenekleri;
   istekSecenekleri = {
     url : apiSecenekleri.sunucu + apiSecenekleri.apiYolu + req.params.mekanid,
     method : "GET",
@@ -106,12 +108,12 @@ var mekanBilgisi = function (req, res, callback) {
     istekSecenekleri,
     function(hata, cevap, mekanDetaylari) {
       var gelenMekan = mekanDetaylari;
-      if (!cevap.body.mesaj) {    //cevap.statusCode==200
+      if (cevap.statusCode==200) {    
         gelenMekan.koordinatlar = {
           enlem : mekanDetaylari.koordinatlar[0],
           boylam : mekanDetaylari.koordinatlar[1]
         };
-        detaySayfasiOlustur(req, res,gelenMekan);
+        callback(req, res,gelenMekan);
       }else {
         hataGoster(req, res, cevap.statusCode);
       }
@@ -119,115 +121,63 @@ var mekanBilgisi = function (req, res, callback) {
   );
 }
 
+const mekanBilgisi = function (req, res, callback) {
+  mekanBilgisiGetir(req, res, function(req, res, cevap){
+    detaySayfasiOlustur(req, res, cevap);
+  });
+};
 
-/*
-const anaSayfa=function(req, res, next) {
-  res.render('mekanlar-liste', 
-  {  'baslik':'Anasayfa',
-     'footerAd':'Kadir İrpik 2020',
-     'sayfaBaslik':{
-       'siteAd':'Mekan32',
-       'aciklama':'Isparta civarındaki mekanları keşfedin'
-     },
-     'mekanlar':[
-      {
-        'ad':'Starbucks',
-        'adres':'Centrum Garden AVM',
-        'puan':4,
-        'imkanlar':['Dünya Kahveleri','Kekler','Pastalar'],
-        'mesafe':'10km'
-      },
-      {
-        'ad':'Gloria Jeans',
-        'adres':'SDÜ Doğu Kampüsü',
-        'puan':3,
-        'imkanlar':['Dünya Kahveleri','Kekler','Pastalar'],
-        'mesafe':'1km'
-      },
-      {
-        'ad':'Köfteci Yusuf',
-        'adres':'Havalimanı',
-        'puan':5,
-        'imkanlar':['Döner','Ayran','Kola'],
-        'mesafe':'60km'
-      },
-      {
-        'ad':'Lc Waikiki',
-        'adres':'Çarşı',
-        'puan':3,
-        'imkanlar':['Gömlek','Pantolon'],
-        'mesafe':'20km'
-      },
-      {
-        'ad':'İyaş AVM',
-        'adres':'Bahçelievler Mah.',
-        'puan':4,
-        'imkanlar':['Alışveriş','Sinema','Yemek'],
-        'mesafe':'5km'
-      }
-     ]
-  }
-  )
-  ;
-}
-
-const mekanBilgisi=function(req, res, next) {
-  res.render('mekan-detay',
-    { 
-    'baslik': 'Mekan Bilgisi',
-    'footerAd':'Kadir İrpik 2020',
-    'sayfaBilgisi':'Starbucks',
-    'mekanBilgisi':{
-      'ad':'Starbucks',
-      'adres':'Centrum Garden AVM',
-      'puan':4,
-      'imkanlar':['Dünya Kahveleri','Kekler','Pastalar'],
-      'koordinatlar':{
-          'enlem':'37.781885',
-          'boylam':'30.566034'
-      },
-      'saatler':[
-        {
-           'gunler':'Pazartesi-Cuma',
-           'acilis':'7:00',
-           'kapanis':'23:00',
-           'kapali':false
-        },
-        {
-          'gunler':'Cumartesi',
-          'acilis':'9:00',
-          'kapanis':'22:00',
-          'kapali':false
-       },
-       {
-        'gunler':'Pazar',
-        'kapali':true
-       }
-      ],
-      'yorumlar':[
-        {
-           'yorumYapan':'Kadir İrpik',
-           'puan':3,
-           'tarih':'1.12.2020',
-           'yorumMetni':'Kahveleri güzel.'
-        }
-      ]
-    }
-  }
-    );
-}
-*/
-
-const yorumEkle=function(req, res, next) {
-  res.render('yorum-ekle', { title: 'Yorum Ekle',
-  footer:footer
+var yorumSayfasiOlustur = function (req, res, mekanBilgisi) {
+  res.render('yorum-ekle', { baslik: mekanBilgisi.ad+ ' Mekanına Yorum Ekle',
+    sayfaBaslik:mekanBilgisi.ad+ ' Mekanına Yorum Ekle',
+    footer: footer,
+    hata: req.query.hata
 });
+};
+
+const yorumEkle=function(req, res){
+  mekanBilgisiGetir(req, res, function(req, res, cevap){
+    yorumSayfasiOlustur(req, res, cevap);
+  });
 }
+
+const yorumumuEkle=function(req,res){
+  var istekSecenekleri, gonderilenYorum,mekanid;
+  mekanid=req.params.mekanid;
+  gonderilenYorum = {
+    yorumYapan: req.body.name,
+    puan: parseInt(req.body.rating, 10),
+    yorumMetni: req.body.review
+  };
+  istekSecenekleri = {
+    url : apiSecenekleri.sunucu+ apiSecenekleri.apiYolu+mekanid+'/yorumlar',
+    method : "POST",
+    json : gonderilenYorum
+  };
+  if (!gonderilenYorum.yorumYapan || !gonderilenYorum.puan || !gonderilenYorum.yorumMetni) {
+    res.redirect('/mekan/' + mekanid + '/yorum/yeni?hata=evet');
+  }else {
+    request(
+      istekSecenekleri,
+      function(hata, cevap, body) {
+        if (cevap.statusCode === 201) {
+          res.redirect('/mekan/' + mekanid);
+        }
+        else if (cevap.statusCode === 400 && body.name && body.name ==="ValidationError"){
+          res.redirect('/mekan/' + mekanid + '/yorum/yeni?hata=evet');
+        }else {
+          hataGoster(req, res, cevap.statusCode);
+        }
+      }
+    );
+  }
+};
 
 
 module.exports={
 	anaSayfa,
 	mekanBilgisi,
-  yorumEkle
+  yorumEkle,
+  yorumumuEkle
 }
 

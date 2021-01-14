@@ -5,7 +5,8 @@ var ctrlDigerleri=require('../controllers/digerleri');
 
 router.get('/', ctrlMekanlar.anaSayfa);
 router.get('/mekan/:mekanid', ctrlMekanlar.mekanBilgisi);
-router.get('/mekan/yorum/yeni', ctrlMekanlar.yorumEkle);
+router.get('/mekan/:mekanid/yorum/yeni', ctrlMekanlar.yorumEkle);
 router.get('/hakkinda', ctrlDigerleri.hakkinda);
+router.post('/mekan/:mekanid/yorum/yeni', ctrlMekanlar.yorumumuEkle);
 
 module.exports = router;
